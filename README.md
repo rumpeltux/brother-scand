@@ -40,11 +40,11 @@ image data within the same (original) connection. But only on Windows... Well, n
 
 ## Installation
 ```
-git clone https://github.com/darsto/brother-scanner-driver.git
-cd brother-scanner-driver
+git clone https://github.com/rumpeltux/brother-scand.git
+cd brother-scand
 git submodule init
 git submodule update
-make install
+make && sudo make install
 ```
 
 The driver **should** work for the most of Brother devices. 
