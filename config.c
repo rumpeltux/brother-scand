@@ -13,7 +13,7 @@
 struct brother_config g_config;
 
 void init_item_config(struct item_config *item_config,
-                      const struct item_config *template, char name[1024]);
+                      const struct item_config *template, const char *name);
 
 const char *g_scan_func_str[CONFIG_SCAN_MAX_FUNCS] = {
     [SCAN_FUNC_IMAGE] = "IMAGE",
@@ -55,7 +55,7 @@ static void init_default_device_config(struct item_config *item_config,
 }
 
 void init_item_config(struct item_config *item_config,
-                      const struct item_config *template, char *name) {
+                      const struct item_config *template, const char *name) {
   memcpy(item_config, template, sizeof(*item_config));
   item_config->hostname = strdup(name);
 }
