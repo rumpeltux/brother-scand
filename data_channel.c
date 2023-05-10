@@ -160,35 +160,33 @@ static int invoke_callback(struct data_channel *data_channel,
   }
   LOG_INFO("Running hook: %s\n", script);
   char *args[] = {"/bin/sh", "-c", script, NULL};
-  char *envp[11];
 
-  int env_idx = 0;
-#define SET_ENVP(attr, value)                                  \
-  rc = snprintf(buf, sizeof(buf), attr, value);                \
-  if (rc < 0 || rc == sizeof(*envp)) {                         \
-    LOG_ERR("couldn't write env. snprintf failed: %d", errno); \
-    return -1;                                                 \
-  }                                                            \
-  envp[env_idx++] = strdup(buf);
-
-  SET_ENVP("SCANNER_XDPI=%d", data_channel->xdpi);
-  SET_ENVP("SCANNER_YDPI=%d", data_channel->ydpi);
-  SET_ENVP("SCANNER_HEIGHT=%d", data_channel->height);
-  SET_ENVP("SCANNER_WIDTH=%d", data_channel->width);
-  SET_ENVP("SCANNER_PAGE=%d", data_channel->page_data.id);
-  SET_ENVP("SCANNER_IP=%s", data_channel->config->ip);
-  SET_ENVP("SCANNER_SCANID=%d", data_channel->scan_id);
-  SET_ENVP("SCANNER_HOSTNAME=%s", data_channel->item->hostname);
-  SET_ENVP("SCANNER_FUNC=%s", scan_func);
+  snprintf(buf, sizeof(buf), "%d", data_channel->xdpi);
+  setenv("SCANNER_XDPI", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->xdpi);
+  setenv("SCANNER_YDPI", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->height);
+  setenv("SCANNER_HEIGHT", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->width);
+  setenv("SCANNER_WIDTH", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->page_data.id);
+  setenv("SCANNER_PAGE", buf, 1);
+  setenv("SCANNER_IP", data_channel->config->ip, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->scan_id);
+  setenv("SCANNER_SCANID", buf, 1);
+  setenv("SCANNER_HOSTNAME", data_channel->item->hostname, 1);
+  setenv("SCANNER_FUNC", scan_func, 1);
   if (filename) {
-    SET_ENVP("SCANNER_FILENAME=%s", filename);
+    setenv("SCANNER_FILENAME", filename, 1);
   }
-  envp[env_idx] = NULL;
+  else {
+    unsetenv("SCANNER_FILENAME");
+  }
 
   rc = fork();
   if (rc == 0) {  // child process: run the user script
-    execve(args[0], args, envp);
-    perror("execve");  // we only get here if execve fails.
+    execv(args[0], args);
+    perror("execv");  // we only get here if execve fails.
     exit(1);
   }
   if (rc < 0) {
@@ -200,11 +198,6 @@ static int invoke_callback(struct data_channel *data_channel,
     LOG_DEBUG("Waiting for hook to finish: %d\n", rc);
     waitpid(rc, NULL, 0);  // wait for child to finish
     LOG_DEBUG("Hook finished: %d\n", rc);
-  }
-  char **envp_p = envp;
-  while (*envp_p != NULL) {
-    free(*envp_p);
-    envp_p++;
   }
   return 0;
 }
