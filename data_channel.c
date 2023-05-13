@@ -432,6 +432,8 @@ exchange_params2(struct data_channel *data_channel)
     int msg_len, rc;
     size_t i;
     long tmp;
+    long startx = 0, starty = 0, width = 0, height = 0;
+    long adf_startx = 0, adf_starty = 0, adf_width = 0, adf_height = 0;
 
     rc = brother_conn_poll(data_channel->conn, 3);
     if (rc <= 0) {
@@ -491,8 +493,6 @@ exchange_params2(struct data_channel *data_channel)
     }
     data_channel->xdpi = recv_params[0];
     data_channel->ydpi = recv_params[1];
-    data_channel->width = recv_params[4];
-    data_channel->height = recv_params[6];
 
     if (*buf_p != 0x00) {
       LOG_ERR("%s: received invalid exchange params msg (message too long).\n",
@@ -515,9 +515,31 @@ exchange_params2(struct data_channel *data_channel)
       param->value[sizeof(param->value) - 1] = 0;
     }
 
+    /* for ADF */
+    param = get_scan_param_by_id(data_channel, 'Z');
+    assert(param);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &adf_startx, &adf_starty, &adf_width, &adf_height);
+
     param = get_scan_param_by_id(data_channel, 'A');
     assert(param);
-    sprintf(param->value, "0,0,%ld,%ld", recv_params[4], recv_params[6]);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &startx, &starty, &width, &height);
+
+    if ((recv_params[6] <= 0) && (adf_height > 0)) {
+      startx = adf_startx;
+      width = adf_width;
+      starty = adf_starty;
+      height = adf_height;
+    }
+    else if (height <= 0) {
+      startx = recv_params[3];
+      width = recv_params[4];
+      starty = recv_params[5];
+      height = recv_params[6];
+    }
+
+    sprintf(param->value, "%ld,%ld,%ld,%ld", startx, starty, width, height);
+    data_channel->width = width;
+    data_channel->height = height;
 
     /* prepare a response */
     buf_p = buf;
@@ -525,7 +547,7 @@ exchange_params2(struct data_channel *data_channel)
     *buf_p++ = 0x58;  // packet id (?)
     *buf_p++ = 0x0a;  // header end
 
-    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGL");
+    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGLS");
     if (buf_p == NULL) {
       LOG_ERR("Failed to write scan params on data_channel %s\n",
               data_channel->config->ip);
@@ -668,6 +690,7 @@ exchange_params1(struct data_channel *data_channel)
                 data_channel->config->ip, param->value);
         return -1;
     }
+
     return data_channel_send_scan_params(data_channel);
 }
 

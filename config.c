@@ -37,6 +37,7 @@ static void init_default_device_config(struct item_config *item_config,
   strcpy(param->value, VAL);
 
   ADD_SCAN_PARAM('A', "");
+  ADD_SCAN_PARAM('Z', "");
   ADD_SCAN_PARAM('B', "50");
   ADD_SCAN_PARAM('C', "JPEG");
   ADD_SCAN_PARAM('D', "SIN");
@@ -50,6 +51,7 @@ static void init_default_device_config(struct item_config *item_config,
   ADD_SCAN_PARAM('P', "A4");
   ADD_SCAN_PARAM('R', "300,300");
   ADD_SCAN_PARAM('T', "JPEG");
+  ADD_SCAN_PARAM('S', "");
 
 #undef ADD_SCAN_PARAM
 }
