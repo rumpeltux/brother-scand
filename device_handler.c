@@ -183,6 +183,7 @@ device_handler_add_device(struct device_config *config)
 
     }
 
+    /*
     status = snmp_get_printer_status(g_dev_handler.button_conn, buf,
                                      sizeof(buf), inet_addr(config->ip));
 
@@ -191,6 +192,7 @@ device_handler_add_device(struct device_config *config)
               status);
       return NULL;
     }
+    */
 
     dev = calloc(1, sizeof(*dev));
     if (dev == NULL) {
@@ -200,6 +202,8 @@ device_handler_add_device(struct device_config *config)
 
     dev->ip = inet_addr(config->ip);
     snprintf(dev->local_ip, sizeof(dev->local_ip), "%s", local_ip);
+    dev->next_ping_time = 0;
+    dev->next_register_time = 0;
     dev->config = config;
     dev->channel = data_channel_create(config);
     if (dev->channel == NULL) {

@@ -432,8 +432,8 @@ exchange_params2(struct data_channel *data_channel)
     int msg_len, rc;
     size_t i;
     long tmp;
-    long startx = 0, starty = 0, width = 0, height = 0;
-    long adf_startx = 0, adf_starty = 0, adf_width = 0, adf_height = 0;
+    long startx = 0, starty = 0, endx = 0, endy = 0;
+    long adf_startx = 0, adf_starty = 0, adf_endx = 0, adf_endy = 0;
 
     rc = brother_conn_poll(data_channel->conn, 3);
     if (rc <= 0) {
@@ -518,28 +518,28 @@ exchange_params2(struct data_channel *data_channel)
     /* for ADF */
     param = get_scan_param_by_id(data_channel, 'Z');
     assert(param);
-    sscanf(param->value, "%ld,%ld,%ld,%ld", &adf_startx, &adf_starty, &adf_width, &adf_height);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &adf_startx, &adf_starty, &adf_endx, &adf_endy);
 
     param = get_scan_param_by_id(data_channel, 'A');
     assert(param);
-    sscanf(param->value, "%ld,%ld,%ld,%ld", &startx, &starty, &width, &height);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &startx, &starty, &endx, &endy);
 
-    if ((recv_params[6] <= 0) && (adf_height > 0)) {
+    if ((recv_params[6] <= 0) && (adf_endy > 0)) {
       startx = adf_startx;
-      width = adf_width;
+      endx = adf_endx;
       starty = adf_starty;
-      height = adf_height;
+      endy = adf_endy;
     }
-    else if (height <= 0) {
+    else if (endy <= 0) {
       startx = recv_params[3];
-      width = recv_params[4];
+      endx = recv_params[4];
       starty = recv_params[5];
-      height = recv_params[6];
+      endy = recv_params[6];
     }
 
-    sprintf(param->value, "%ld,%ld,%ld,%ld", startx, starty, width, height);
-    data_channel->width = width;
-    data_channel->height = height;
+    sprintf(param->value, "%ld,%ld,%ld,%ld", startx, starty, endx, endy);
+    data_channel->width = endx - startx + 1;
+    data_channel->height = endy - starty + 1;
 
     /* prepare a response */
     buf_p = buf;
@@ -547,7 +547,7 @@ exchange_params2(struct data_channel *data_channel)
     *buf_p++ = 0x58;  // packet id (?)
     *buf_p++ = 0x0a;  // header end
 
-    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGLS");
+    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGLPS");
     if (buf_p == NULL) {
       LOG_ERR("Failed to write scan params on data_channel %s\n",
               data_channel->config->ip);
