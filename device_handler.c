@@ -267,12 +267,8 @@ device_handler_loop(void *arg)
                                                 sizeof(buf), dev->ip);
           if (dev->status != 10001 && dev->status != 10006
 		  && dev->status != 40000 && dev->status != 40038) {
-            if (need_register) {
-              // If the device is offline try re-establishing the connection
-              // more frequently, so that we can re-register when it comes back
-              dev->next_ping_time =
-                  time_now + DEVICE_OFFLINE_RETRY_DURATION_SEC;
-            }
+            dev->next_ping_time = time_now + DEVICE_OFFLINE_RETRY_DURATION_SEC;
+            dev->next_register_time = 0;
             LOG_WARN("Warn: device at %s is currently unreachable.\n",
                      dev->config->ip);
           }
