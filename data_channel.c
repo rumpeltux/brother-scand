@@ -538,8 +538,8 @@ exchange_params2(struct data_channel *data_channel)
     }
 
     sprintf(param->value, "%ld,%ld,%ld,%ld", startx, starty, endx, endy);
-    data_channel->width = endx - startx + 1;
-    data_channel->height = endy - starty + 1;
+    data_channel->width = endx - startx;
+    data_channel->height = endy - starty;
 
     /* prepare a response */
     buf_p = buf;
