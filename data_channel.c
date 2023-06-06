@@ -524,12 +524,16 @@ exchange_params2(struct data_channel *data_channel)
     assert(param);
     sscanf(param->value, "%ld,%ld,%ld,%ld", &startx, &starty, &endx, &endy);
 
+    /* scanning from adf doesn't seem to send endy, in that case recv_params[6] (endy) is 0 */
+    /* so if recv_params[6] is 0, we assume that the document comes from adf */
+    /* in that case, use Z parameters if set */
     if ((recv_params[6] <= 0) && (adf_endy > 0)) {
       startx = adf_startx;
       endx = adf_endx;
       starty = adf_starty;
       endy = adf_endy;
     }
+    /* otherwise, use A parameters if set, otherwise use parameters received from scanner */
     else if (endy <= 0) {
       startx = recv_params[3];
       endx = recv_params[4];
