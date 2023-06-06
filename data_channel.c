@@ -160,35 +160,33 @@ static int invoke_callback(struct data_channel *data_channel,
   }
   LOG_INFO("Running hook: %s\n", script);
   char *args[] = {"/bin/sh", "-c", script, NULL};
-  char *envp[11];
 
-  int env_idx = 0;
-#define SET_ENVP(attr, value)                                  \
-  rc = snprintf(buf, sizeof(buf), attr, value);                \
-  if (rc < 0 || rc == sizeof(*envp)) {                         \
-    LOG_ERR("couldn't write env. snprintf failed: %d", errno); \
-    return -1;                                                 \
-  }                                                            \
-  envp[env_idx++] = strdup(buf);
-
-  SET_ENVP("SCANNER_XDPI=%d", data_channel->xdpi);
-  SET_ENVP("SCANNER_YDPI=%d", data_channel->ydpi);
-  SET_ENVP("SCANNER_HEIGHT=%d", data_channel->height);
-  SET_ENVP("SCANNER_WIDTH=%d", data_channel->width);
-  SET_ENVP("SCANNER_PAGE=%d", data_channel->page_data.id);
-  SET_ENVP("SCANNER_IP=%s", data_channel->config->ip);
-  SET_ENVP("SCANNER_SCANID=%d", data_channel->scan_id);
-  SET_ENVP("SCANNER_HOSTNAME=%s", data_channel->item->hostname);
-  SET_ENVP("SCANNER_FUNC=%s", scan_func);
+  snprintf(buf, sizeof(buf), "%d", data_channel->xdpi);
+  setenv("SCANNER_XDPI", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->xdpi);
+  setenv("SCANNER_YDPI", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->height);
+  setenv("SCANNER_HEIGHT", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->width);
+  setenv("SCANNER_WIDTH", buf, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->page_data.id);
+  setenv("SCANNER_PAGE", buf, 1);
+  setenv("SCANNER_IP", data_channel->config->ip, 1);
+  snprintf(buf, sizeof(buf), "%d", data_channel->scan_id);
+  setenv("SCANNER_SCANID", buf, 1);
+  setenv("SCANNER_HOSTNAME", data_channel->item->hostname, 1);
+  setenv("SCANNER_FUNC", scan_func, 1);
   if (filename) {
-    SET_ENVP("SCANNER_FILENAME=%s", filename);
+    setenv("SCANNER_FILENAME", filename, 1);
   }
-  envp[env_idx] = NULL;
+  else {
+    unsetenv("SCANNER_FILENAME");
+  }
 
   rc = fork();
   if (rc == 0) {  // child process: run the user script
-    execve(args[0], args, envp);
-    perror("execve");  // we only get here if execve fails.
+    execv(args[0], args);
+    perror("execv");  // we only get here if execve fails.
     exit(1);
   }
   if (rc < 0) {
@@ -200,11 +198,6 @@ static int invoke_callback(struct data_channel *data_channel,
     LOG_DEBUG("Waiting for hook to finish: %d\n", rc);
     waitpid(rc, NULL, 0);  // wait for child to finish
     LOG_DEBUG("Hook finished: %d\n", rc);
-  }
-  char **envp_p = envp;
-  while (*envp_p != NULL) {
-    free(*envp_p);
-    envp_p++;
   }
   return 0;
 }
@@ -439,6 +432,8 @@ exchange_params2(struct data_channel *data_channel)
     int msg_len, rc;
     size_t i;
     long tmp;
+    long startx = 0, starty = 0, endx = 0, endy = 0;
+    long adf_startx = 0, adf_starty = 0, adf_endx = 0, adf_endy = 0;
 
     rc = brother_conn_poll(data_channel->conn, 3);
     if (rc <= 0) {
@@ -498,8 +493,6 @@ exchange_params2(struct data_channel *data_channel)
     }
     data_channel->xdpi = recv_params[0];
     data_channel->ydpi = recv_params[1];
-    data_channel->width = recv_params[4];
-    data_channel->height = recv_params[6];
 
     if (*buf_p != 0x00) {
       LOG_ERR("%s: received invalid exchange params msg (message too long).\n",
@@ -522,9 +515,35 @@ exchange_params2(struct data_channel *data_channel)
       param->value[sizeof(param->value) - 1] = 0;
     }
 
+    /* for ADF */
+    param = get_scan_param_by_id(data_channel, 'Z');
+    assert(param);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &adf_startx, &adf_starty, &adf_endx, &adf_endy);
+
     param = get_scan_param_by_id(data_channel, 'A');
     assert(param);
-    sprintf(param->value, "0,0,%ld,%ld", recv_params[4], recv_params[6]);
+    sscanf(param->value, "%ld,%ld,%ld,%ld", &startx, &starty, &endx, &endy);
+
+    /* scanning from adf doesn't seem to send endy, in that case recv_params[6] (endy) is 0 */
+    /* so if recv_params[6] is 0, we assume that the document comes from adf */
+    /* in that case, use Z parameters if set */
+    if ((recv_params[6] <= 0) && (adf_endy > 0)) {
+      startx = adf_startx;
+      endx = adf_endx;
+      starty = adf_starty;
+      endy = adf_endy;
+    }
+    /* otherwise, use A parameters if set, otherwise use parameters received from scanner */
+    else if (endy <= 0) {
+      startx = recv_params[3];
+      endx = recv_params[4];
+      starty = recv_params[5];
+      endy = recv_params[6];
+    }
+
+    sprintf(param->value, "%ld,%ld,%ld,%ld", startx, starty, endx, endy);
+    data_channel->width = endx - startx;
+    data_channel->height = endy - starty;
 
     /* prepare a response */
     buf_p = buf;
@@ -532,7 +551,7 @@ exchange_params2(struct data_channel *data_channel)
     *buf_p++ = 0x58;  // packet id (?)
     *buf_p++ = 0x0a;  // header end
 
-    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGL");
+    buf_p = write_scan_params(data_channel, buf_p, "RMCJBNADGLPS");
     if (buf_p == NULL) {
       LOG_ERR("Failed to write scan params on data_channel %s\n",
               data_channel->config->ip);
@@ -675,6 +694,7 @@ exchange_params1(struct data_channel *data_channel)
                 data_channel->config->ip, param->value);
         return -1;
     }
+
     return data_channel_send_scan_params(data_channel);
 }
 

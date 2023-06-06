@@ -37,6 +37,7 @@ static void init_default_device_config(struct item_config *item_config,
   strcpy(param->value, VAL);
 
   ADD_SCAN_PARAM('A', "");
+  ADD_SCAN_PARAM('Z', "");
   ADD_SCAN_PARAM('B', "50");
   ADD_SCAN_PARAM('C', "JPEG");
   ADD_SCAN_PARAM('D', "SIN");
@@ -50,12 +51,13 @@ static void init_default_device_config(struct item_config *item_config,
   ADD_SCAN_PARAM('P', "A4");
   ADD_SCAN_PARAM('R', "300,300");
   ADD_SCAN_PARAM('T', "JPEG");
+  ADD_SCAN_PARAM('S', "");
 
 #undef ADD_SCAN_PARAM
 }
 
 void init_item_config(struct item_config *item_config,
-                      const struct item_config *template, char *name) {
+                      const struct item_config *template, char name[1024]) {
   memcpy(item_config, template, sizeof(*item_config));
   item_config->hostname = strdup(name);
 }

@@ -183,6 +183,7 @@ device_handler_add_device(struct device_config *config)
 
     }
 
+    /*
     status = snmp_get_printer_status(g_dev_handler.button_conn, buf,
                                      sizeof(buf), inet_addr(config->ip));
 
@@ -191,6 +192,7 @@ device_handler_add_device(struct device_config *config)
               status);
       return NULL;
     }
+    */
 
     dev = calloc(1, sizeof(*dev));
     if (dev == NULL) {
@@ -200,6 +202,8 @@ device_handler_add_device(struct device_config *config)
 
     dev->ip = inet_addr(config->ip);
     snprintf(dev->local_ip, sizeof(dev->local_ip), "%s", local_ip);
+    dev->next_ping_time = 0;
+    dev->next_register_time = 0;
     dev->config = config;
     dev->channel = data_channel_create(config);
     if (dev->channel == NULL) {
@@ -263,12 +267,8 @@ device_handler_loop(void *arg)
                                                 sizeof(buf), dev->ip);
           if (dev->status != 10001 && dev->status != 10006
 		  && dev->status != 40000 && dev->status != 40038) {
-            if (need_register) {
-              // If the device is offline try re-establishing the connection
-              // more frequently, so that we can re-register when it comes back
-              dev->next_ping_time =
-                  time_now + DEVICE_OFFLINE_RETRY_DURATION_SEC;
-            }
+            dev->next_ping_time = time_now + DEVICE_OFFLINE_RETRY_DURATION_SEC;
+            dev->next_register_time = 0;
             LOG_WARN("Warn: device at %s is currently unreachable.\n",
                      dev->config->ip);
           }
