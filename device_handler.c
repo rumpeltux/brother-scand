@@ -174,7 +174,12 @@ device_handler_add_device(struct device_config *config)
         return NULL;
     }
 
-    rc = brother_conn_get_local_ip(conn, local_ip);
+    if (config->local_ip != NULL) {
+      strncpy(local_ip, config->local_ip, 15);
+      rc = 0;
+    } else {
+      rc = brother_conn_get_local_ip(conn, local_ip);
+    }
     brother_conn_close(conn);
     if (rc != 0) {
         LOG_ERR("Can't get the local ip address that connected to %s:161.\n",
@@ -350,7 +355,11 @@ device_handler_stop(void *arg)
         TAILQ_REMOVE(&g_dev_handler.devices, dev, tailq);
         snmp_get_printer_status(g_dev_handler.button_conn, buf, sizeof(buf),
                                 dev->ip);
-        brother_conn_get_local_ip(g_dev_handler.button_conn, ip);
+        if (dev->config->local_ip != NULL) {
+          strncpy(ip, dev->config->local_ip, 15);
+        } else {
+          brother_conn_get_local_ip(g_dev_handler.button_conn, ip);
+        }
         register_scanner_driver(dev, ip, false);
         free(dev);
     }

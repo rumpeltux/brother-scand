@@ -23,6 +23,7 @@ struct scan_param {
 
 struct device_config {
     char *ip;
+    char *local_ip;
     unsigned timeout;
     TAILQ_HEAD(, item_config) items;
     TAILQ_ENTRY(device_config) tailq;
