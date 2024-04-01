@@ -698,7 +698,7 @@ int data_channel_init_connection(struct data_channel *data_channel) {
 
   msg_len = brother_conn_receive(data_channel->conn, buffer, sizeof(buffer));
   if (msg_len < 1) {
-    if (errno == ENOTCONN) {
+    if (errno == ENOTCONN || errno == ECONNRESET) {
       LOG_WARN("Lost connection on data_channel %s\n",
                data_channel->config->ip);
       // Let's reconnect.
