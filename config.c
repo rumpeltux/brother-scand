@@ -55,7 +55,7 @@ static void init_default_device_config(struct item_config *item_config,
 }
 
 void init_item_config(struct item_config *item_config,
-                      const struct item_config *template, char name[1024]) {
+                      const struct item_config *template, char *name) {
   memcpy(item_config, template, sizeof(*item_config));
   item_config->hostname = strdup(name);
 }
