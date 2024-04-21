@@ -174,7 +174,7 @@ config_init(const char *config_path)
           goto out;
         }
         dev_config->timeout = var_uint;
-      } else if (sscanf((char *)buf, "network.local-ip %64s", var_str) == 1) {
+      } else if (sscanf((char *)buf, "network.local-ip %15s", var_str) == 1) {
         if (dev_config == NULL) {
           fprintf(stderr, "Error: local ip specified without a device.\n");
           goto out;
