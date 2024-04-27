@@ -68,7 +68,7 @@ Tests are written in C++ for convenience and use the GoogleTest framework.
 The goal of those tests is to make sure the project keeps working even in the
 absence of actual scanners to test with.
 
-    sudo apt install cmake googletest
+    sudo apt install cmake googletest clang
     make test
 
 NOTE: Since tests rely on specific ports and their cleanup isn't always clean,
