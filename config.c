@@ -141,6 +141,7 @@ config_init(const char *config_path)
         }
         dev_config->ip = strdup(var_str);
         dev_config->timeout = CONFIG_NETWORK_DEFAULT_TIMEOUT_SEC;
+        dev_config->local_ip = NULL;
         TAILQ_INIT(&dev_config->items);
         TAILQ_INSERT_TAIL(&g_config.devices, dev_config, tailq);
       } else if (sscanf(buf, "preset %15s %15s", var_str, var2_str) == 2) {
@@ -173,6 +174,12 @@ config_init(const char *config_path)
           goto out;
         }
         dev_config->timeout = var_uint;
+      } else if (sscanf((char *)buf, "network.local-ip %15s", var_str) == 1) {
+        if (dev_config == NULL) {
+          fprintf(stderr, "Error: local ip specified without a device.\n");
+          goto out;
+        }
+        dev_config->local_ip = strdup(var_str);
       } else if (sscanf((char *)buf, "hostname %15s", var_str) == 1) {
         if (preset_config == NULL) {
           fprintf(stderr, "Error: hostname specified without a preset.\n");
